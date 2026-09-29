@@ -21,10 +21,14 @@ import verifyCheckout from "./middleware/verifyCheckout.js";
 import verifyHmac from "./middleware/verifyHmac.js";
 import verifyProxy from "./middleware/verifyProxy.js";
 import verifyRequest from "./middleware/verifyRequest.js";
+import authRouter from "./routes/auth/index.js";
+import debugRouter from "./routes/debug/index.js";
 import proxyRouter from "./routes/app_proxy/index.js";
 import checkoutRoutes from "./routes/checkout/index.js";
 import userRoutes from "./routes/index.js";
 import webhookHandler from "./webhooks/_index.js";
+import { syncSessionIndexes } from "../utils/models/SessionModel.js";
+import { fileURLToPath } from "url";
 
 setupCheck(); // Run a check to ensure everything is setup properly
 
@@ -35,8 +39,25 @@ const isDev = process.env.NODE_ENV === "dev";
 const mongoUrl =
   process.env.MONGO_URL || "mongodb://127.0.0.1:27017/shopify-express-app";
 
-mongoose.connect(mongoUrl);
+/**
+ * Connects to MongoDB and ensures the session collection's unique and TTL
+ * indexes exist before serving traffic.
+ *
+ * @returns {Promise<typeof mongoose>} The connected Mongoose instance.
+ */
+const connectDatabase = async () => {
+  await mongoose.connect(mongoUrl);
+  await syncSessionIndexes();
+  return mongoose;
+};
 
+/**
+ * Builds the Express application with the OAuth install router, debug
+ * observability router, webhooks and the Vite/static SPA fallback.
+ *
+ * @param {string} [root] - Project root used to locate `dist/client`.
+ * @returns {Promise<{ app: Express.Express }>} The configured application.
+ */
 const createServer = async (root = process.cwd()) => {
   const app = Express();
   app.disable("x-powered-by");
@@ -54,6 +75,12 @@ const createServer = async (root = process.cwd()) => {
   );
 
   app.use(Express.json());
+
+  // Classic OAuth install flow and its observability endpoint. Mounted before
+  // the SPA fallbacks so /auth, /auth/callback and /debug/oauth always reach
+  // their routers.
+  app.use("/auth", authRouter);
+  app.use("/debug", debugRouter);
 
   app.post("/api/graphql", verifyRequest, async (req, res) => {
     try {
@@ -169,12 +196,34 @@ const createServer = async (root = process.cwd()) => {
   return { app };
 };
 
-if (isDev) {
-  createServer();
-} else {
-  createServer().then(({ app }) => {
+/**
+ * Boots the HTTP server after the database connection is ready.
+ *
+ * @returns {Promise<void>} Resolves once the server is listening (prod) or
+ *   Vite middleware mode is running (dev).
+ */
+const startServer = async () => {
+  await connectDatabase();
+
+  if (isDev) {
+    await createServer();
+  } else {
+    const { app } = await createServer();
     app.listen(PORT, () => {
       console.log(`--> Running on ${PORT}`);
     });
+  }
+};
+
+const isDirectRun =
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
+  startServer().catch((error) => {
+    console.error("---> Failed to start server", error);
+    process.exit(1);
   });
 }
+
+export { createServer, connectDatabase };

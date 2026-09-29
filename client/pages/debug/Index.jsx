@@ -22,6 +22,29 @@ const DebugIndex = () => {
             <Card>
               <BlockStack gap="200">
                 <Text as="h2" variant="headingMd">
+                  OAuth Install Chain
+                </Text>
+                <Text>
+                  Trace /auth and /auth/callback step by step with source files
+                  and function names.
+                </Text>
+                <InlineStack wrap={false} align="end">
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      navigate("/debug/oauth");
+                    }}
+                  >
+                    Inspect
+                  </Button>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+          <Layout.Section variant="oneHalf">
+            <Card>
+              <BlockStack gap="200">
+                <Text as="h2" variant="headingMd">
                   Scopes
                 </Text>
                 <Text>
