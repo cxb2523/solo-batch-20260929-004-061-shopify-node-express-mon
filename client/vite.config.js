@@ -25,5 +25,7 @@ export default defineConfig({
   server: {
     allowedHosts: [`${process.env.SHOPIFY_APP_URL.replace(/https:\/\//, "")}`],
     cors: false,
+    // The OAuth chain page imports the server-shared module at ../shared.
+    fs: { allow: [dirname(fileURLToPath(import.meta.url)), ".."] },
   },
 });

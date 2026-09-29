@@ -85,6 +85,29 @@ const DebugIndex = () => {
               </BlockStack>
             </Card>
           </Layout.Section>
+          <Layout.Section variant="oneHalf">
+            <Card>
+              <BlockStack gap="200">
+                <Text as="h2" variant="headingMd">
+                  OAuth Chain
+                </Text>
+                <Text>
+                  Inspect the /auth to /auth/callback install chain, state and
+                  nonce branches, and session storage tradeoffs.
+                </Text>
+                <InlineStack wrap={false} align="end">
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      navigate("/debug/oauth");
+                    }}
+                  >
+                    Inspect
+                  </Button>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
           <Layout.Section variant="oneHalf" />
         </Layout>
       </Page>

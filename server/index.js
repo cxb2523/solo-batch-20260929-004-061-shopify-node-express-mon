@@ -22,7 +22,9 @@ import verifyHmac from "./middleware/verifyHmac.js";
 import verifyProxy from "./middleware/verifyProxy.js";
 import verifyRequest from "./middleware/verifyRequest.js";
 import proxyRouter from "./routes/app_proxy/index.js";
+import authRouter from "./routes/auth.js";
 import checkoutRoutes from "./routes/checkout/index.js";
+import debugRouter from "./routes/debug.js";
 import userRoutes from "./routes/index.js";
 import webhookHandler from "./webhooks/_index.js";
 
@@ -40,6 +42,13 @@ mongoose.connect(mongoUrl);
 const createServer = async (root = process.cwd()) => {
   const app = Express();
   app.disable("x-powered-by");
+
+  // Classic OAuth grant chain: /auth -> Shopify -> /auth/callback. Mounted
+  // before isInitialLoad/csp so top-level browser navigations always hit it.
+  app.use("/auth", authRouter);
+
+  // Unauthenticated observability endpoint for the OAuth install chain.
+  app.use("/debug", debugRouter);
 
   // Incoming webhook requests
   app.post(
